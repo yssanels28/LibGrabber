@@ -40,16 +40,17 @@
 
             <Button
                 android:id="@+id/browse"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_width="64dp"
+                android:layout_height="56dp"
                 android:text="..."
                 android:textStyle="bold"
                 android:textColor="#000000"
                 android:background="#D6D6D6"
                 android:layout_marginStart="8dp"
-                android:minWidth="0dp"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"/>
+                android:clickable="true"
+                android:focusable="true"
+                android:minWidth="64dp"
+                android:minHeight="56dp"/>
 
         </LinearLayout>
 
@@ -72,16 +73,17 @@
 
             <Button
                 android:id="@+id/browse2"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_width="64dp"
+                android:layout_height="56dp"
                 android:text="..."
                 android:textStyle="bold"
                 android:textColor="#000000"
                 android:background="#D6D6D6"
                 android:layout_marginStart="8dp"
-                android:minWidth="0dp"
-                android:paddingStart="16dp"
-                android:paddingEnd="16dp"/>
+                android:clickable="true"
+                android:focusable="true"
+                android:minWidth="64dp"
+                android:minHeight="56dp"/>
 
         </LinearLayout>
 
