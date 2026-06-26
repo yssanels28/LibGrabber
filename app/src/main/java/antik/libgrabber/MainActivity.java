@@ -90,6 +90,7 @@ public class MainActivity extends AppCompatActivity {
     private void openFilePicker() {
 
         if (!hasStoragePermission()) {
+            Toast.makeText(this, S[3], Toast.LENGTH_SHORT).show();
             permissionsAppe();
             return;
         }
@@ -104,25 +105,30 @@ public class MainActivity extends AppCompatActivity {
         properties.offset = root;
         properties.extensions = new String[]{"so"};
 
-        FilePickerDialog dialog = new FilePickerDialog(MainActivity.this, properties);
-        dialog.setTitle("Select .so file");
+        try {
+            FilePickerDialog dialog = new FilePickerDialog(MainActivity.this, properties);
+            dialog.setTitle("Select .so file");
 
-        dialog.setDialogSelectionListener(new DialogSelectionListener() {
-            @Override
-            public void onSelectedFilePaths(String[] files) {
-                if (files != null && files.length > 0) {
-                    in1.setText(files[0]);
+            dialog.setDialogSelectionListener(new DialogSelectionListener() {
+                @Override
+                public void onSelectedFilePaths(String[] files) {
+                    if (files != null && files.length > 0) {
+                        in1.setText(files[0]);
+                    }
                 }
-            }
-        });
+            });
 
-        dialog.show();
+            dialog.show();
+        } catch (Exception e) {
+            Toast.makeText(this, "Picker error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
     }
 
     //-- pick output folder, auto-name the .hpp from the chosen .so
     private void openFolderPicker() {
 
         if (!hasStoragePermission()) {
+            Toast.makeText(this, S[3], Toast.LENGTH_SHORT).show();
             permissionsAppe();
             return;
         }
@@ -136,32 +142,36 @@ public class MainActivity extends AppCompatActivity {
         properties.error_dir = root;
         properties.offset = root;
 
-        FilePickerDialog dialog = new FilePickerDialog(MainActivity.this, properties);
-        dialog.setTitle("Select output folder");
+        try {
+            FilePickerDialog dialog = new FilePickerDialog(MainActivity.this, properties);
+            dialog.setTitle("Select output folder");
 
-        dialog.setDialogSelectionListener(new DialogSelectionListener() {
-            @Override
-            public void onSelectedFilePaths(String[] files) {
-                if (files != null && files.length > 0) {
+            dialog.setDialogSelectionListener(new DialogSelectionListener() {
+                @Override
+                public void onSelectedFilePaths(String[] files) {
+                    if (files != null && files.length > 0) {
 
-                    String folder = files[0];
-                    String input = in1.getText().toString().trim();
-                    String baseName = "output";
+                        String folder = files[0];
+                        String input = in1.getText().toString().trim();
+                        String baseName = "output";
 
-                    if (!TextUtils.isEmpty(input)) {
-                        File inFile = new File(input);
-                        String name = inFile.getName();
-                        int dot = name.lastIndexOf('.');
-                        baseName = (dot > 0) ? name.substring(0, dot) : name;
+                        if (!TextUtils.isEmpty(input)) {
+                            File inFile = new File(input);
+                            String name = inFile.getName();
+                            int dot = name.lastIndexOf('.');
+                            baseName = (dot > 0) ? name.substring(0, dot) : name;
+                        }
+
+                        File outFile = new File(folder, baseName + ".hpp");
+                        in2.setText(outFile.getAbsolutePath());
                     }
-
-                    File outFile = new File(folder, baseName + ".hpp");
-                    in2.setText(outFile.getAbsolutePath());
                 }
-            }
-        });
+            });
 
-        dialog.show();
+            dialog.show();
+        } catch (Exception e) {
+            Toast.makeText(this, "Picker error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
     }
 
     //-- resolve the real shared-storage root, bypassing Environment.getExternalStorageDirectory()
