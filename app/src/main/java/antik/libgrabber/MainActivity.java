@@ -12,27 +12,26 @@ package antik.libgrabber;
  * Fox Mode 🍺
  */
 
-import android.app.AlertDialog;
-import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.pm.PackageManager;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
-import android.provider.Settings;
+import android.provider.OpenableColumns;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.*;
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
-import com.github.angads25.filepicker.controller.DialogSelectionListener;
-import com.github.angads25.filepicker.model.DialogConfigs;
-import com.github.angads25.filepicker.model.DialogProperties;
-import com.github.angads25.filepicker.view.FilePickerDialog;
-
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -41,13 +40,16 @@ public class MainActivity extends AppCompatActivity {
     private TextView stone;
     private ProgressBar proccce;
 
-    private String[] S = {"Processing <--> ", "Invalid file", "Input required", "Allow file access", "Permission Required", "Allow", "Cancel"};
+    //-- URIs chosen through the Android system pickers (SAF)
+    private Uri inputUri;
+    private Uri outputUri;
 
+    private ActivityResultLauncher<String[]> pickSoLauncher;
+    private ActivityResultLauncher<String> createHppLauncher;
 
     @Override
     protected void onCreate(Bundle bundle) {
         super.onCreate(bundle);
-
 
         setContentView(R.layout.activity_main);
 
@@ -62,6 +64,35 @@ public class MainActivity extends AppCompatActivity {
         stone = findViewById(R.id.sta);
         proccce = findViewById(R.id.proc);
 
+        //-- system file picker for the .so input
+        pickSoLauncher = registerForActivityResult(
+                new ActivityResultContracts.OpenDocument(),
+                new androidx.activity.result.ActivityResultCallback<Uri>() {
+                    @Override
+                    public void onActivityResult(@Nullable Uri uri) {
+                        if (uri != null) {
+                            inputUri = uri;
+                            in1.setText(queryDisplayName(uri));
+                            if (TextUtils.isEmpty(in2.getText())) {
+                                stone.setText("Fichier selectionne. Choisis ou enregistrer.");
+                            }
+                        }
+                    }
+                });
+
+        //-- system "create document" picker for the .hpp output
+        createHppLauncher = registerForActivityResult(
+                new ActivityResultContracts.CreateDocument("text/x-c++hdr"),
+                new androidx.activity.result.ActivityResultCallback<Uri>() {
+                    @Override
+                    public void onActivityResult(@Nullable Uri uri) {
+                        if (uri != null) {
+                            outputUri = uri;
+                            in2.setText(queryDisplayName(uri));
+                        }
+                    }
+                });
+
         lever.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -72,233 +103,139 @@ public class MainActivity extends AppCompatActivity {
         browse.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Toast.makeText(MainActivity.this, "Ouverture du selecteur...", Toast.LENGTH_SHORT).show();
-                openFilePicker();
+                //-- accept any file; many ROMs don't map .so to a MIME type
+                pickSoLauncher.launch(new String[]{"*/*"});
             }
         });
 
         browse2.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Toast.makeText(MainActivity.this, "Ouverture du selecteur...", Toast.LENGTH_SHORT).show();
-                openFolderPicker();
+                String suggested = suggestedOutputName();
+                createHppLauncher.launch(suggested);
             }
         });
-
-        permissionsAppe();
     }
 
-    //-- open native .so file picker
-    private void openFilePicker() {
-
-        if (!hasStoragePermission()) {
-            Toast.makeText(this, S[3], Toast.LENGTH_SHORT).show();
-            permissionsAppe();
-            return;
+    //-- propose <inputbasename>.hpp as the default output file name
+    private String suggestedOutputName() {
+        String base = "output";
+        if (inputUri != null) {
+            String name = queryDisplayName(inputUri);
+            if (!TextUtils.isEmpty(name)) {
+                int dot = name.lastIndexOf('.');
+                base = (dot > 0) ? name.substring(0, dot) : name;
+            }
         }
+        return base + ".hpp";
+    }
 
-        File root = getRootStorageDir();
-
-        DialogProperties properties = new DialogProperties();
-        properties.selection_mode = DialogConfigs.SINGLE_MODE;
-        properties.selection_type = DialogConfigs.FILE_SELECT;
-        properties.root = root;
-        properties.error_dir = root;
-        properties.offset = root;
-        properties.extensions = new String[]{"so"};
-
-        try {
-            FilePickerDialog dialog = new FilePickerDialog(MainActivity.this, properties);
-            dialog.setTitle("Select .so file");
-
-            dialog.setDialogSelectionListener(new DialogSelectionListener() {
-                @Override
-                public void onSelectedFilePaths(String[] files) {
-                    if (files != null && files.length > 0) {
-                        in1.setText(files[0]);
-                    }
+    //-- resolve a human-readable file name from a content:// uri
+    private String queryDisplayName(Uri uri) {
+        String result = uri.getLastPathSegment();
+        try (Cursor c = getContentResolver().query(uri, null, null, null, null)) {
+            if (c != null && c.moveToFirst()) {
+                int idx = c.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                if (idx >= 0) {
+                    String n = c.getString(idx);
+                    if (!TextUtils.isEmpty(n)) result = n;
                 }
-            });
-
-            dialog.show();
-        } catch (Exception e) {
-            Toast.makeText(this, "Picker error: " + e.getMessage(), Toast.LENGTH_LONG).show();
-        }
-    }
-
-    //-- pick output folder, auto-name the .hpp from the chosen .so
-    private void openFolderPicker() {
-
-        if (!hasStoragePermission()) {
-            Toast.makeText(this, S[3], Toast.LENGTH_SHORT).show();
-            permissionsAppe();
-            return;
-        }
-
-        File root = getRootStorageDir();
-
-        DialogProperties properties = new DialogProperties();
-        properties.selection_mode = DialogConfigs.SINGLE_MODE;
-        properties.selection_type = DialogConfigs.DIR_SELECT;
-        properties.root = root;
-        properties.error_dir = root;
-        properties.offset = root;
-
-        try {
-            FilePickerDialog dialog = new FilePickerDialog(MainActivity.this, properties);
-            dialog.setTitle("Select output folder");
-
-            dialog.setDialogSelectionListener(new DialogSelectionListener() {
-                @Override
-                public void onSelectedFilePaths(String[] files) {
-                    if (files != null && files.length > 0) {
-
-                        String folder = files[0];
-                        String input = in1.getText().toString().trim();
-                        String baseName = "output";
-
-                        if (!TextUtils.isEmpty(input)) {
-                            File inFile = new File(input);
-                            String name = inFile.getName();
-                            int dot = name.lastIndexOf('.');
-                            baseName = (dot > 0) ? name.substring(0, dot) : name;
-                        }
-
-                        File outFile = new File(folder, baseName + ".hpp");
-                        in2.setText(outFile.getAbsolutePath());
-                    }
-                }
-            });
-
-            dialog.show();
-        } catch (Exception e) {
-            Toast.makeText(this, "Picker error: " + e.getMessage(), Toast.LENGTH_LONG).show();
-        }
-    }
-
-    //-- resolve the real shared-storage root, bypassing Environment.getExternalStorageDirectory()
-    //-- which on some Android 12+ ROMs (notably MIUI) resolves through a symlink into /mnt
-    //-- instead of the real /storage/emulated/0 path.
-    private File getRootStorageDir() {
-
-        File candidate = new File("/storage/emulated/0");
-        if (candidate.exists() && candidate.isDirectory() && candidate.canRead()) {
-            return candidate;
-        }
-
-        try {
-            File resolved = Environment.getExternalStorageDirectory().getCanonicalFile();
-            if (resolved.exists() && resolved.isDirectory()) {
-                return resolved;
             }
-        } catch (java.io.IOException ignored) {
+        } catch (Exception ignored) {
         }
-
-        return Environment.getExternalStorageDirectory();
+        return result;
     }
 
-    //-- deep write
-    private void permissionsAppe() {
-
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-            if (!Environment.isExternalStorageManager()) {alu();}
-            } else {
-            if (checkSelfPermission(android.Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED || checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(new String[]{android.Manifest.permission.READ_EXTERNAL_STORAGE, android.Manifest.permission.WRITE_EXTERNAL_STORAGE
-                }, 100);
-            }
-        }
-    }
-
-    private boolean hasStoragePermission() {
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-            return Environment.isExternalStorageManager();
-        } else {
-            return checkSelfPermission(android.Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
-                    && checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
-        }
-    }
-
-    private void alu() {
-
-        AlertDialog.Builder b = new AlertDialog.Builder(MainActivity.this);
-
-        b.setTitle(S[4]);
-        b.setMessage(S[3]);
-
-        b.setPositiveButton(S[5], new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface d, int w) {
-                Intent i = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
-                i.setData(Uri.parse("package:" + getPackageName()));
-                startActivity(i);
-                d.dismiss();
-            }
-        });
-
-        b.setNegativeButton(S[6], new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface d, int w) {
-            d.dismiss();
-            }
-        });
-        AlertDialog dialog = b.create();
-        dialog.show();
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int r, String[] p, int[] g) {
-        super.onRequestPermissionsResult(r, p, g);
-    }
     private void start() {
 
-        String input = in1.getText().toString().trim();
-        String out = in2.getText().toString().trim();
-
-        if (TextUtils.isEmpty(input)) {
-        stone.setText(S[2]);
-        return;
-        }
-
-        if (TextUtils.isEmpty(out)) {
-        out = input.replace(".so", ".hpp");
-        in2.setText(out);
-        }
-
-        File inFile = new File(input);
-        if (!inFile.exists()) {
-        stone.setText(S[1]);
-        return;
-        }
-
-        File outFile = new File(out);
-        if (outFile.getParentFile() != null) {
-        outFile.getParentFile().mkdirs();
+        if (inputUri == null) {
+            stone.setText("Choisis d'abord un fichier .so");
+            return;
         }
 
         proccce.setVisibility(View.VISIBLE);
         lever.setEnabled(false);
-        stone.setText(S[0]);
+        stone.setText("Processing <--> ");
 
-        final String finalOut = out;
+        final Uri fInput = inputUri;
+        final Uri fOutput = outputUri;
 
         Thread th = new Thread(new Runnable() {
             @Override
             public void run() {
 
-                final String result = lib.dump(input, finalOut);
+                String message;
+                try {
+                    //-- copy the chosen .so into app cache to obtain a real path
+                    File inCache = new File(getCacheDir(), "input.so");
+                    copyUriToFile(fInput, inCache);
 
+                    File outCache = new File(getCacheDir(), "output.hpp");
+
+                    final String result = lib.dump(inCache.getAbsolutePath(), outCache.getAbsolutePath());
+
+                    //-- push the produced header back to the location the user picked
+                    if (outCache.exists() && fOutput != null) {
+                        copyFileToUri(outCache, fOutput);
+                        message = result + "\nEnregistre : " + queryDisplayName(fOutput);
+                    } else if (outCache.exists()) {
+                        //-- no output location chosen: keep it in the app folder
+                        File ext = new File(getExternalFilesDir(null), suggestedOutputName());
+                        copyFile(outCache, ext);
+                        message = result + "\nEnregistre : " + ext.getAbsolutePath();
+                    } else {
+                        message = result;
+                    }
+                } catch (Throwable e) {
+                    message = "Erreur : " + e.getMessage();
+                }
+
+                final String finalMessage = message;
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
                         proccce.setVisibility(View.GONE);
                         lever.setEnabled(true);
-                        stone.setText(result);
+                        stone.setText(finalMessage);
                     }
                 });
             }
         });
 
         th.start();
+    }
+
+    //-- stream helpers -------------------------------------------------------
+
+    private void copyUriToFile(Uri uri, File dest) throws Exception {
+        try (InputStream in = getContentResolver().openInputStream(uri);
+             OutputStream out = new FileOutputStream(dest)) {
+            if (in == null) throw new Exception("Lecture impossible du fichier choisi");
+            pump(in, out);
+        }
+    }
+
+    private void copyFileToUri(File src, Uri uri) throws Exception {
+        try (InputStream in = new FileInputStream(src);
+             OutputStream out = getContentResolver().openOutputStream(uri, "wt")) {
+            if (out == null) throw new Exception("Ecriture impossible vers la destination");
+            pump(in, out);
+        }
+    }
+
+    private void copyFile(File src, File dst) throws Exception {
+        try (InputStream in = new FileInputStream(src);
+             OutputStream out = new FileOutputStream(dst)) {
+            pump(in, out);
+        }
+    }
+
+    private void pump(InputStream in, OutputStream out) throws Exception {
+        byte[] buf = new byte[8192];
+        int n;
+        while ((n = in.read(buf)) > 0) {
+            out.write(buf, 0, n);
+        }
+        out.flush();
     }
 }
