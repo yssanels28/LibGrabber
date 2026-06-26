@@ -22,80 +22,54 @@
         android:orientation="vertical"
         android:padding="10dp">
 
-        <LinearLayout
+        <EditText
+            android:id="@+id/in1"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical">
+            android:hint="enter so full path"
+            android:textColor="#000000"
+            android:textColorHint="#888888"
+            android:padding="12dp"/>
 
-            <EditText
-                android:id="@+id/in1"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:hint="enter so full path"
-                android:textColor="#000000"
-                android:textColorHint="#888888"
-                android:padding="12dp"/>
+        <Button
+            android:id="@+id/browse"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:text="Choisir le fichier .so"
+            android:textStyle="bold"
+            android:textColor="#000000"
+            android:background="#D6D6D6"
+            android:layout_marginTop="6dp"/>
 
-            <Button
-                android:id="@+id/browse"
-                android:layout_width="64dp"
-                android:layout_height="56dp"
-                android:text="..."
-                android:textStyle="bold"
-                android:textColor="#000000"
-                android:background="#D6D6D6"
-                android:layout_marginStart="8dp"
-                android:clickable="true"
-                android:focusable="true"
-                android:minWidth="64dp"
-                android:minHeight="56dp"/>
-
-        </LinearLayout>
-
-        <LinearLayout
+        <EditText
+            android:id="@+id/in2"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:gravity="center_vertical"
-            android:layout_marginTop="12dp">
+            android:hint="output path .hpp"
+            android:textColor="#000000"
+            android:textColorHint="#888888"
+            android:padding="12dp"
+            android:layout_marginTop="16dp"/>
 
-            <EditText
-                android:id="@+id/in2"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:hint="output path .hpp"
-                android:textColor="#000000"
-                android:textColorHint="#888888"
-                android:padding="12dp"/>
-
-            <Button
-                android:id="@+id/browse2"
-                android:layout_width="64dp"
-                android:layout_height="56dp"
-                android:text="..."
-                android:textStyle="bold"
-                android:textColor="#000000"
-                android:background="#D6D6D6"
-                android:layout_marginStart="8dp"
-                android:clickable="true"
-                android:focusable="true"
-                android:minWidth="64dp"
-                android:minHeight="56dp"/>
-
-        </LinearLayout>
+        <Button
+            android:id="@+id/browse2"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:text="Choisir le dossier de sortie"
+            android:textStyle="bold"
+            android:textColor="#000000"
+            android:background="#D6D6D6"
+            android:layout_marginTop="6dp"/>
 
         <Button
             android:id="@+id/dum"
             android:layout_width="match_parent"
-            android:layout_height="40dp"
+            android:layout_height="52dp"
             android:text="DUMP"
             android:textStyle="bold"
             android:textColor="#000000"
             android:background="#D6D6D6"
-            android:layout_marginTop="20dp"/>
+            android:layout_marginTop="24dp"/>
 
         <TextView
             android:id="@+id/sta"

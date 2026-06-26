@@ -72,6 +72,7 @@ public class MainActivity extends AppCompatActivity {
         browse.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                Toast.makeText(MainActivity.this, "Ouverture du selecteur...", Toast.LENGTH_SHORT).show();
                 openFilePicker();
             }
         });
@@ -79,6 +80,7 @@ public class MainActivity extends AppCompatActivity {
         browse2.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                Toast.makeText(MainActivity.this, "Ouverture du selecteur...", Toast.LENGTH_SHORT).show();
                 openFolderPicker();
             }
         });
